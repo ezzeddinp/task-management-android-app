@@ -1,6 +1,5 @@
 package com.example.taskmanager.data.repository
 
-import com.example.taskmanager.data.model.ApiResponse
 import com.example.taskmanager.data.model.CreateTaskRequest
 import com.example.taskmanager.data.model.Task
 import com.example.taskmanager.data.model.UpdateTaskRequest
@@ -57,7 +56,7 @@ class TaskRepository {
         }
     }
 
-    suspend fun updateTask(id: Int, title: String, description: String?, isCompleted: Boolean): Result<Task> = withContext(Dispatchers.IO) {
+    suspend fun updateTask(id: Int, title: String, description: String?, isCompleted: Int): Result<Task> = withContext(Dispatchers.IO) {
         return@withContext try {
             val request = UpdateTaskRequest(title, description, isCompleted)
             val response = apiService.updateTask(id, request)

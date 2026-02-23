@@ -15,7 +15,7 @@ class TaskViewModel : ViewModel() {
     private val _tasks = MutableLiveData<List<Task>>()
     val tasks: LiveData<List<Task>> = _tasks
 
-    private val _isLoading = MutableLiveData<Boolean>()
+    private val _isLoading = MutableLiveData<Boolean>(false)
     val isLoading: LiveData<Boolean> = _isLoading
 
     private val _error = MutableLiveData<String?>()
@@ -23,10 +23,6 @@ class TaskViewModel : ViewModel() {
 
     private val _operationSuccess = MutableLiveData<Boolean>()
     val operationSuccess: LiveData<Boolean> = _operationSuccess
-
-    init {
-        loadTasks()
-    }
 
     fun loadTasks() {
         viewModelScope.launch {
@@ -53,7 +49,6 @@ class TaskViewModel : ViewModel() {
 
             when (val result = repository.createTask(title, description)) {
                 is TaskRepository.Result.Success -> {
-                    loadTasks() // Refresh list
                     _operationSuccess.value = true
                 }
                 is TaskRepository.Result.Error -> {
@@ -67,13 +62,12 @@ class TaskViewModel : ViewModel() {
         }
     }
 
-    fun updateTask(id: Int, title: String, description: String?, isCompleted: Boolean) {
+    fun updateTask(id: Int, title: String, description: String?, isCompleted: Int) {
         viewModelScope.launch {
             _isLoading.value = true
 
             when (val result = repository.updateTask(id, title, description, isCompleted)) {
                 is TaskRepository.Result.Success -> {
-                    loadTasks()
                     _operationSuccess.value = true
                 }
                 is TaskRepository.Result.Error -> {
@@ -93,7 +87,6 @@ class TaskViewModel : ViewModel() {
 
             when (val result = repository.deleteTask(id)) {
                 is TaskRepository.Result.Success -> {
-                    loadTasks()
                     _operationSuccess.value = true
                 }
                 is TaskRepository.Result.Error -> {

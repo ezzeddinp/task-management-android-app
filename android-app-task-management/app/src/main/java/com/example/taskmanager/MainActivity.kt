@@ -40,6 +40,15 @@ class MainActivity : AppCompatActivity() {
             },
             onTaskDelete = { task ->
                 showDeleteConfirmation(task)
+            },
+            onTaskEdit = { task ->
+                val intent = Intent(this, AddTaskActivity::class.java).apply {
+                    putExtra("TASK_ID", task.id)
+                    putExtra("TASK_TITLE", task.title)
+                    putExtra("TASK_DESC", task.description)
+                    putExtra("TASK_STATUS", task.isCompleted)
+                }
+                startActivity(intent)
             }
         )
 
@@ -52,7 +61,7 @@ class MainActivity : AppCompatActivity() {
     private fun setupObservers() {
         viewModel.tasks.observe(this) { tasks ->
             taskAdapter.submitList(tasks)
-            binding.emptyState.visibility = if (tasks.isEmpty()) View.VISIBLE else View.GONE
+            binding.emptyState.visibility = if (tasks.isNullOrEmpty()) View.VISIBLE else View.GONE
         }
 
         viewModel.isLoading.observe(this) { isLoading ->
@@ -61,15 +70,22 @@ class MainActivity : AppCompatActivity() {
 
         viewModel.error.observe(this) { error ->
             error?.let {
-                Snackbar.make(binding.root, it, Snackbar.LENGTH_LONG).show()
+                Snackbar.make(binding.root, "Error: $it", Snackbar.LENGTH_INDEFINITE)
+                    .setAction("Retry") { viewModel.loadTasks() }
+                    .show()
+                
+                if (taskAdapter.itemCount == 0) {
+                    binding.emptyState.visibility = View.VISIBLE
+                }
                 viewModel.clearError()
             }
         }
 
         viewModel.operationSuccess.observe(this) { success ->
             if (success) {
-                Toast.makeText(this, "Operation successful", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Success!", Toast.LENGTH_SHORT).show()
                 viewModel.clearOperationSuccess()
+                viewModel.loadTasks()
             }
         }
     }
@@ -86,15 +102,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showTaskDetails(task: Task) {
+        val isCompleted = task.isCompleted == 1
         AlertDialog.Builder(this)
             .setTitle(task.title)
             .setMessage("""
                 Description: ${task.description ?: "No description"}
-                Status: ${if (task.isCompleted) "Completed" else "Pending"}
-                Created: ${task.createdAt}
+                Status: ${if (isCompleted) "Completed" else "Pending"}
             """.trimIndent())
             .setPositiveButton("OK", null)
-            .setNeutralButton("Toggle Status") { _, _ ->
+            .setNeutralButton(if (isCompleted) "Mark Pending" else "Mark Done") { _, _ ->
                 viewModel.toggleTaskComplete(task.id)
             }
             .show()
@@ -103,7 +119,7 @@ class MainActivity : AppCompatActivity() {
     private fun showDeleteConfirmation(task: Task) {
         AlertDialog.Builder(this)
             .setTitle("Delete Task")
-            .setMessage("Are you sure you want to delete '${task.title}'?")
+            .setMessage("Are you sure?")
             .setPositiveButton("Delete") { _, _ ->
                 viewModel.deleteTask(task.id)
             }

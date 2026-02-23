@@ -9,12 +9,13 @@ const app = express();
 
 // Middleware
 app.use(cors({
-    origin: process.env.CORS_ORIGIN || '*',
+    origin: 'http://192.168.137.1:3000',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 app.use(express.json());
+
 app.use(express.urlencoded({ extended: true }));
 
 // Request logging middleware (development)

@@ -13,11 +13,13 @@ import com.example.taskmanager.R
 import com.example.taskmanager.data.model.Task
 import java.text.SimpleDateFormat
 import java.util.Locale
+import java.util.TimeZone
 
 class TaskAdapter(
     private val onTaskClick: (Task) -> Unit,
     private val onTaskToggle: (Task) -> Unit,
-    private val onTaskDelete: (Task) -> Unit
+    private val onTaskDelete: (Task) -> Unit,
+    private val onTaskEdit: (Task) -> Unit
 ) : ListAdapter<Task, TaskAdapter.TaskViewHolder>(TaskDiffCallback()) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TaskViewHolder {
@@ -36,32 +38,54 @@ class TaskAdapter(
         private val tvDate: TextView = itemView.findViewById(R.id.tvDate)
         private val checkBoxComplete: CheckBox = itemView.findViewById(R.id.checkBoxComplete)
         private val btnDelete: ImageButton = itemView.findViewById(R.id.btnDelete)
+        private val btnEdit: ImageButton = itemView.findViewById(R.id.btnEdit)
 
         fun bind(task: Task) {
             tvTitle.text = task.title
             tvDescription.text = task.description ?: "No description"
             tvDescription.visibility = if (task.description.isNullOrEmpty()) View.GONE else View.VISIBLE
 
-            // Format date
-            val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
-            val outputFormat = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault())
-            tvDate.text = try {
-                val date = inputFormat.parse(task.createdAt)
-                outputFormat.format(date!!)
-            } catch (e: Exception) {
+            // PRIORITASKAN JAM UPDATE, JIKA GAK ADA PAKAI JAM CREATE
+            val displayDate = if (!task.updatedAt.isNullOrEmpty() && task.updatedAt != task.createdAt) {
+                "Updated: ${task.updatedAt}"
+            } else {
                 task.createdAt
             }
 
-            checkBoxComplete.isChecked = task.isCompleted
+            // PERBAIKAN FORMAT JAM: Konversi dari UTC ke Waktu Lokal
+            val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
+            inputFormat.timeZone = TimeZone.getTimeZone("UTC")
+            
+            val outputFormat = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault())
+            outputFormat.timeZone = TimeZone.getDefault()
 
-            // Strikethrough text if completed
-            tvTitle.paint.isStrikeThruText = task.isCompleted
-            tvTitle.alpha = if (task.isCompleted) 0.6f else 1.0f
+            tvDate.text = try {
+                // Bersihkan string date jika ada prefix "Updated: "
+                val rawDate = displayDate.replace("Updated: ", "")
+                val date = inputFormat.parse(rawDate)
+                val formatted = outputFormat.format(date!!)
+                if (displayDate.startsWith("Updated: ")) "Updated: $formatted" else formatted
+            } catch (e: Exception) {
+                try {
+                    val fallbackInput = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+                    val rawDate = displayDate.replace("Updated: ", "")
+                    val date = fallbackInput.parse(rawDate)
+                    val formatted = outputFormat.format(date!!)
+                    if (displayDate.startsWith("Updated: ")) "Updated: $formatted" else formatted
+                } catch (e2: Exception) {
+                    displayDate
+                }
+            }
 
-            // Click listeners
+            val isCompleted = task.isCompleted == 1
+            checkBoxComplete.isChecked = isCompleted
+            tvTitle.paint.isStrikeThruText = isCompleted
+            tvTitle.alpha = if (isCompleted) 0.6f else 1.0f
+
             itemView.setOnClickListener { onTaskClick(task) }
             checkBoxComplete.setOnClickListener { onTaskToggle(task) }
             btnDelete.setOnClickListener { onTaskDelete(task) }
+            btnEdit.setOnClickListener { onTaskEdit(task) }
         }
     }
 
