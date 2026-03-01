@@ -13,10 +13,13 @@ data class Task(
     val description: String?,
 
     @SerializedName("is_completed")
-    val isCompleted: Boolean,
+    val isCompleted: Int,
 
     @SerializedName("created_at")
-    val createdAt: String
+    val createdAt: String,
+
+    @SerializedName("updated_at")
+    val updatedAt: String? = null // Tambahkan ini untuk menangkap waktu update
 )
 
 data class ApiResponse<T>(
@@ -41,7 +44,7 @@ data class CreateTaskRequest(
     val description: String?,
 
     @SerializedName("is_completed")
-    val isCompleted: Boolean = false
+    val isCompleted: Int = 0
 )
 
 data class UpdateTaskRequest(
@@ -52,5 +55,5 @@ data class UpdateTaskRequest(
     val description: String?,
 
     @SerializedName("is_completed")
-    val isCompleted: Boolean
+    val isCompleted: Int
 )

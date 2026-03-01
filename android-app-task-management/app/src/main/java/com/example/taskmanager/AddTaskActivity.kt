@@ -1,7 +1,5 @@
 package com.example.taskmanager
 
-//noinspection SuspiciousImport
-import android.R
 import android.os.Bundle
 import android.view.MenuItem
 import android.widget.Toast
@@ -14,16 +12,34 @@ class AddTaskActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityAddTaskBinding
     private val viewModel: TaskViewModel by viewModels()
+    
+    private var isEditMode = false
+    private var taskId: Int = -1
+    private var currentStatus: Int = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityAddTaskBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        supportActionBar?.apply {
-            setDisplayHomeAsUpEnabled(true)
-            title = "Add New Task"
+        // Cek apakah ada data task yang dikirim (berarti mode edit)
+        val taskIdExtra = intent.getIntExtra("TASK_ID", -1)
+        if (taskIdExtra != -1) {
+            isEditMode = true
+            taskId = taskIdExtra
+            val title = intent.getStringExtra("TASK_TITLE") ?: ""
+            val description = intent.getStringExtra("TASK_DESC")
+            currentStatus = intent.getIntExtra("TASK_STATUS", 0)
+
+            binding.etTitle.setText(title)
+            binding.etDescription.setText(description)
+            supportActionBar?.title = "Edit Task"
+            binding.btnSave.text = "Update Task"
+        } else {
+            supportActionBar?.title = "Add New Task"
         }
+
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
         setupObservers()
         setupListeners()
@@ -32,12 +48,13 @@ class AddTaskActivity : AppCompatActivity() {
     private fun setupObservers() {
         viewModel.isLoading.observe(this) { isLoading ->
             binding.btnSave.isEnabled = !isLoading
-            binding.btnSave.text = if (isLoading) "Saving..." else "Save Task"
+            binding.btnSave.text = if (isLoading) "Saving..." else if (isEditMode) "Update Task" else "Save Task"
         }
 
         viewModel.operationSuccess.observe(this) { success ->
             if (success) {
-                Toast.makeText(this, "Task created successfully!", Toast.LENGTH_SHORT).show()
+                val msg = if (isEditMode) "Task updated!" else "Task created!"
+                Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
                 finish()
             }
         }
@@ -60,20 +77,27 @@ class AddTaskActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            viewModel.createTask(
-                title = title,
-                description = description.ifEmpty { null }
-            )
+            if (isEditMode) {
+                viewModel.updateTask(
+                    id = taskId,
+                    title = title,
+                    description = description.ifEmpty { null },
+                    isCompleted = currentStatus
+                )
+            } else {
+                viewModel.createTask(
+                    title = title,
+                    description = description.ifEmpty { null }
+                )
+            }
         }
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.home -> {
-                finish()
-                true
-            }
-            else -> super.onOptionsItemSelected(item)
+        if (item.itemId == android.R.id.home) {
+            finish()
+            return true
         }
+        return super.onOptionsItemSelected(item)
     }
 }
